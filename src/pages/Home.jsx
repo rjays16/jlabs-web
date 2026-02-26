@@ -12,6 +12,7 @@ const Home = () => {
     const [searchIp, setSearchIp] = useState('');
     const [searching, setSearching] = useState(false);
     const [history, setHistory] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
 
     const api = axios.create({
         baseURL: import.meta.env.VITE_API_URL,
@@ -88,6 +89,34 @@ const Home = () => {
     const handleClear = () => {
         setSearchIp('');
         fetchUserGeoData();
+    };
+
+    const handleSelectItem = (id) => {
+        setSelectedItems((prev) => 
+            prev.includes(id) 
+                ? prev.filter((item) => item !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectedItems.length === history.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(history.map((item) => item.id));
+        }
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) return;
+        
+        try {
+            await api.delete('/api/ip/history', { data: { ids: selectedItems } });
+            setSelectedItems([]);
+            fetchHistory();
+        } catch (err) {
+            console.error('Failed to delete history');
+        }
     };
 
     const handleLogout = () => {
@@ -167,28 +196,59 @@ const Home = () => {
                 </div>
 
                 <div style={styles.historyCard}>
-                    <h2 style={styles.cardTitle}>Search History</h2>
+                    <div style={styles.historyHeader}>
+                        <h2 style={styles.cardTitle}>Search History</h2>
+                        {selectedItems.length > 0 && (
+                            <button onClick={handleDeleteSelected} style={styles.deleteBtn}>
+                                Delete ({selectedItems.length})
+                            </button>
+                        )}
+                    </div>
                     {history.length === 0 ? (
                         <p style={styles.noHistory}>No search history yet</p>
                     ) : (
                         <div style={styles.historyList}>
+                            <div style={styles.historyItem} style={{ cursor: 'default', backgroundColor: '#e5e7eb' }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={selectedItems.length === history.length && history.length > 0}
+                                    onChange={handleSelectAll}
+                                    style={styles.checkbox}
+                                />
+                                <span style={{ ...styles.historyIp, marginLeft: '0.5rem' }}>Select All</span>
+                            </div>
                             {history.map((item) => (
                                 <div 
                                     key={item.id} 
-                                    style={styles.historyItem}
-                                    onClick={() => {
-                                        setGeoData({
-                                            ip: item.ip_address,
-                                            city: item.city,
-                                            region: item.region,
-                                            country: item.country,
-                                            loc: item.location,
-                                            org: item.org,
-                                            timezone: item.timezone,
-                                        });
+                                    style={{
+                                        ...styles.historyItem,
+                                        backgroundColor: selectedItems.includes(item.id) ? '#e0e7ff' : '#f9fafb'
                                     }}
                                 >
-                                    <span style={styles.historyIp}>{item.ip_address}</span>
+                                    <div style={styles.historyItemLeft}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={selectedItems.includes(item.id)}
+                                            onChange={() => handleSelectItem(item.id)}
+                                            style={styles.checkbox}
+                                        />
+                                        <span 
+                                            style={styles.historyIp}
+                                            onClick={() => {
+                                                setGeoData({
+                                                    ip: item.ip_address,
+                                                    city: item.city,
+                                                    region: item.region,
+                                                    country: item.country,
+                                                    loc: item.location,
+                                                    org: item.org,
+                                                    timezone: item.timezone,
+                                                });
+                                            }}
+                                        >
+                                            {item.ip_address}
+                                        </span>
+                                    </div>
                                     <span style={styles.historyLocation}>
                                         {item.city ? `${item.city}, ${item.country}` : item.country || 'N/A'}
                                     </span>
@@ -323,6 +383,31 @@ const styles = {
         borderRadius: '12px',
         padding: '2rem',
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    },
+    historyHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+    },
+    deleteBtn: {
+        padding: '0.5rem 1rem',
+        backgroundColor: '#dc2626',
+        color: 'white',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontWeight: '500',
+    },
+    checkbox: {
+        width: '18px',
+        height: '18px',
+        cursor: 'pointer',
+    },
+    historyItemLeft: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
     },
     noHistory: {
         textAlign: 'center',
