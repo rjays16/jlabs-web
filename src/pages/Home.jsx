@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 const Home = () => {
     const { user, logout, token } = useAuth();
@@ -192,7 +206,30 @@ const Home = () => {
                                 <span style={styles.infoValue}>{geoData.timezone || 'N/A'}</span>
                             </div>
                         </div>
-                    )}
+                        )}
+
+                        {geoData && geoData.loc && (
+                            <div style={styles.mapContainer}>
+                                <h3 style={styles.mapTitle}>Location Map</h3>
+                                <MapContainer 
+                                    key={geoData.ip}
+                                    center={geoData.loc.split(',').map(Number)} 
+                                    zoom={13} 
+                                    style={{ height: '300px', width: '100%', borderRadius: '8px' }}
+                                >
+                                    <TileLayer
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
+                                    <Marker position={geoData.loc.split(',').map(Number)}>
+                                        <Popup>
+                                            <strong>{geoData.ip}</strong><br />
+                                            {geoData.city}, {geoData.country}
+                                        </Popup>
+                                    </Marker>
+                                </MapContainer>
+                            </div>
+                        )}
                 </div>
 
                 <div style={styles.historyCard}>
@@ -376,6 +413,15 @@ const styles = {
     infoValue: {
         fontSize: '1rem',
         fontWeight: '500',
+        color: '#111',
+    },
+    mapContainer: {
+        marginTop: '1.5rem',
+    },
+    mapTitle: {
+        fontSize: '1.1rem',
+        fontWeight: '600',
+        marginBottom: '1rem',
         color: '#111',
     },
     historyCard: {
