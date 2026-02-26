@@ -9,6 +9,8 @@ const Home = () => {
     const [geoData, setGeoData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [searchIp, setSearchIp] = useState('');
+    const [searching, setSearching] = useState(false);
 
     useEffect(() => {
         if (!localStorage.getItem('token')) {
@@ -24,13 +26,45 @@ const Home = () => {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(import.meta.env.VITE_IPINFO_URL);
+            const response = await axios.get(`${import.meta.env.VITE_IPINFO_URL}/json?token=${import.meta.env.VITE_IPINFO_TOKEN}`);
             setGeoData(response.data);
         } catch (err) {
             setError('Failed to fetch IP information');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        
+        if (!searchIp.trim()) {
+            return;
+        }
+
+        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        
+        if (!ipRegex.test(searchIp.trim())) {
+            setError('Please enter a valid IP address');
+            return;
+        }
+
+        setSearching(true);
+        setError('');
+        
+        try {
+            const response = await axios.get(`${import.meta.env.VITE_IPINFO_URL}/${searchIp.trim()}/json?token=${import.meta.env.VITE_IPINFO_TOKEN}`);
+            setGeoData(response.data);
+        } catch (err) {
+            setError('Failed to fetch information');
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const handleClear = () => {
+        setSearchIp('');
+        fetchUserGeoData();
     };
 
     const handleLogout = () => {
@@ -51,8 +85,26 @@ const Home = () => {
             </header>
 
             <main style={styles.main}>
+                <div style={styles.searchCard}>
+                    <form onSubmit={handleSearch} style={styles.searchForm}>
+                        <input
+                            type="text"
+                            value={searchIp}
+                            onChange={(e) => setSearchIp(e.target.value)}
+                            placeholder="Enter IP address to search"
+                            style={styles.searchInput}
+                        />
+                        <button type="submit" style={styles.searchBtn} disabled={searching}>
+                            {searching ? 'Searching...' : 'Search'}
+                        </button>
+                        <button type="button" onClick={handleClear} style={styles.clearBtn}>
+                            Clear
+                        </button>
+                    </form>
+                </div>
+
                 <div style={styles.card}>
-                    <h2 style={styles.cardTitle}>Your IP Information</h2>
+                    <h2 style={styles.cardTitle}>IP Information</h2>
                     
                     {loading && <p style={styles.loading}>Loading...</p>}
                     {error && <p style={styles.error}>{error}</p>}
@@ -81,7 +133,7 @@ const Home = () => {
                             </div>
                             <div style={styles.infoItem}>
                                 <span style={styles.infoLabel}>Organization</span>
-                                <span style={styles.infoValue}>{geoData.org || 'N/A'}</span>
+                                <span style={styles.infoValue}>{geoData.org || geoData.as_name || 'N/A'}</span>
                             </div>
                             <div style={styles.infoItem}>
                                 <span style={styles.infoLabel}>Timezone</span>
@@ -130,6 +182,43 @@ const styles = {
         maxWidth: '800px',
         margin: '0 auto',
     },
+    searchCard: {
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        marginBottom: '1.5rem',
+    },
+    searchForm: {
+        display: 'flex',
+        gap: '0.75rem',
+    },
+    searchInput: {
+        flex: 1,
+        padding: '0.75rem 1rem',
+        border: '1px solid #d1d5db',
+        borderRadius: '8px',
+        fontSize: '1rem',
+        outline: 'none',
+    },
+    searchBtn: {
+        padding: '0.75rem 1.5rem',
+        backgroundColor: '#4F46E5',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: '500',
+    },
+    clearBtn: {
+        padding: '0.75rem 1.5rem',
+        backgroundColor: '#6b7280',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: '500',
+    },
     card: {
         backgroundColor: 'white',
         borderRadius: '12px',
@@ -149,6 +238,7 @@ const styles = {
     error: {
         color: '#dc2626',
         textAlign: 'center',
+        marginBottom: '1rem',
     },
     infoGrid: {
         display: 'grid',
