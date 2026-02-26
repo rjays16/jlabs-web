@@ -173,7 +173,21 @@ const Home = () => {
                     ) : (
                         <div style={styles.historyList}>
                             {history.map((item) => (
-                                <div key={item.id} style={styles.historyItem}>
+                                <div 
+                                    key={item.id} 
+                                    style={styles.historyItem}
+                                    onClick={() => {
+                                        setGeoData({
+                                            ip: item.ip_address,
+                                            city: item.city,
+                                            region: item.region,
+                                            country: item.country,
+                                            loc: item.location,
+                                            org: item.org,
+                                            timezone: item.timezone,
+                                        });
+                                    }}
+                                >
                                     <span style={styles.historyIp}>{item.ip_address}</span>
                                     <span style={styles.historyLocation}>
                                         {item.city ? `${item.city}, ${item.country}` : item.country || 'N/A'}
@@ -325,6 +339,8 @@ const styles = {
         padding: '0.75rem',
         backgroundColor: '#f9fafb',
         borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
     },
     historyIp: {
         fontWeight: '500',
