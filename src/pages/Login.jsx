@@ -6,7 +6,7 @@ import loginBg from '../assets/login-bg.jpg';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     
     const { login } = useAuth();
@@ -14,14 +14,29 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        setErrors({});
+
+        if (!email) {
+            setErrors({ email: ['Email is required'] });
+            return;
+        }
+        
+        if (!password) {
+            setErrors({ password: ['Password is required'] });
+            return;
+        }
+
         setLoading(true);
 
         try {
             await login(email, password);
             navigate('/home');
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed');
+            if (err.response?.data?.errors) {
+                setErrors(err.response.data.errors);
+            } else {
+                setErrors({ general: [err.response?.data?.message || 'Invalid credentials'] });
+            }
         } finally {
             setLoading(false);
         }
@@ -35,6 +50,7 @@ const Login = () => {
                 <div style={styles.card}>
                     <h2 style={styles.title}>Welcome Back</h2>
                     <p style={styles.subtitle}>Sign in to continue</p>
+                    {errors.general && <p style={styles.generalError}>{errors.general[0]}</p>}
                     <form onSubmit={handleSubmit} style={styles.form}>
                         <div style={styles.inputGroup}>
                             <label style={styles.label}>Email</label>
@@ -42,10 +58,10 @@ const Login = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                style={styles.input}
+                                style={errors.email ? {...styles.input, ...styles.inputError} : styles.input}
                                 placeholder="Enter your email"
-                                required
                             />
+                            {errors.email && <p style={styles.fieldError}>{errors.email[0]}</p>}
                         </div>
                         <div style={styles.inputGroup}>
                             <label style={styles.label}>Password</label>
@@ -53,12 +69,11 @@ const Login = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                style={styles.input}
+                                style={errors.password ? {...styles.input, ...styles.inputError} : styles.input}
                                 placeholder="Enter your password"
-                                required
                             />
+                            {errors.password && <p style={styles.fieldError}>{errors.password[0]}</p>}
                         </div>
-                        {error && <p style={styles.error}>{error}</p>}
                         <button type="submit" style={styles.button} disabled={loading}>
                             {loading ? 'Signing in...' : 'Sign In'}
                         </button>
@@ -134,6 +149,22 @@ const styles = {
         transition: 'border-color 0.2s',
         outline: 'none',
     },
+    inputError: {
+        border: '1px solid #dc2626',
+    },
+    fieldError: {
+        color: '#dc2626',
+        fontSize: '0.8rem',
+    },
+    generalError: {
+        color: '#dc2626',
+        fontSize: '0.875rem',
+        textAlign: 'center',
+        padding: '0.75rem',
+        backgroundColor: '#fef2f2',
+        borderRadius: '6px',
+        marginBottom: '1rem',
+    },
     button: {
         padding: '0.875rem',
         backgroundColor: '#4F46E5',
@@ -145,14 +176,6 @@ const styles = {
         cursor: 'pointer',
         marginTop: '0.5rem',
         transition: 'background-color 0.2s',
-    },
-    error: {
-        color: '#dc2626',
-        fontSize: '0.875rem',
-        textAlign: 'center',
-        padding: '0.75rem',
-        backgroundColor: '#fef2f2',
-        borderRadius: '6px',
     },
     footer: {
         textAlign: 'center',
