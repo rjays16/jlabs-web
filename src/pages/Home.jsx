@@ -4,13 +4,25 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Home = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, token } = useAuth();
     const navigate = useNavigate();
     const [geoData, setGeoData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchIp, setSearchIp] = useState('');
     const [searching, setSearching] = useState(false);
+    const [history, setHistory] = useState([]);
+
+    const api = axios.create({
+        baseURL: import.meta.env.VITE_API_URL,
+    });
+
+    api.interceptors.request.use((config) => {
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    });
 
     useEffect(() => {
         if (!localStorage.getItem('token')) {
@@ -20,18 +32,28 @@ const Home = () => {
 
     useEffect(() => {
         fetchUserGeoData();
+        fetchHistory();
     }, []);
 
     const fetchUserGeoData = async () => {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get(`${import.meta.env.VITE_IPINFO_URL}/json?token=${import.meta.env.VITE_IPINFO_TOKEN}`);
+            const response = await api.get('/api/ip/my');
             setGeoData(response.data);
         } catch (err) {
             setError('Failed to fetch IP information');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchHistory = async () => {
+        try {
+            const response = await api.get('/api/ip/history');
+            setHistory(response.data);
+        } catch (err) {
+            console.error('Failed to fetch history');
         }
     };
 
@@ -53,8 +75,9 @@ const Home = () => {
         setError('');
         
         try {
-            const response = await axios.get(`${import.meta.env.VITE_IPINFO_URL}/${searchIp.trim()}/json?token=${import.meta.env.VITE_IPINFO_TOKEN}`);
+            const response = await api.post('/api/ip/search', { ip: searchIp.trim() });
             setGeoData(response.data);
+            fetchHistory();
         } catch (err) {
             setError('Failed to fetch information');
         } finally {
@@ -133,12 +156,30 @@ const Home = () => {
                             </div>
                             <div style={styles.infoItem}>
                                 <span style={styles.infoLabel}>Organization</span>
-                                <span style={styles.infoValue}>{geoData.org || geoData.as_name || 'N/A'}</span>
+                                <span style={styles.infoValue}>{geoData.org || 'N/A'}</span>
                             </div>
                             <div style={styles.infoItem}>
                                 <span style={styles.infoLabel}>Timezone</span>
                                 <span style={styles.infoValue}>{geoData.timezone || 'N/A'}</span>
                             </div>
+                        </div>
+                    )}
+                </div>
+
+                <div style={styles.historyCard}>
+                    <h2 style={styles.cardTitle}>Search History</h2>
+                    {history.length === 0 ? (
+                        <p style={styles.noHistory}>No search history yet</p>
+                    ) : (
+                        <div style={styles.historyList}>
+                            {history.map((item) => (
+                                <div key={item.id} style={styles.historyItem}>
+                                    <span style={styles.historyIp}>{item.ip_address}</span>
+                                    <span style={styles.historyLocation}>
+                                        {item.city ? `${item.city}, ${item.country}` : item.country || 'N/A'}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -224,6 +265,7 @@ const styles = {
         borderRadius: '12px',
         padding: '2rem',
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        marginBottom: '1.5rem',
     },
     cardTitle: {
         fontSize: '1.25rem',
@@ -261,6 +303,34 @@ const styles = {
         fontSize: '1rem',
         fontWeight: '500',
         color: '#111',
+    },
+    historyCard: {
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '2rem',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    },
+    noHistory: {
+        textAlign: 'center',
+        color: '#6b7280',
+    },
+    historyList: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+    },
+    historyItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '0.75rem',
+        backgroundColor: '#f9fafb',
+        borderRadius: '8px',
+    },
+    historyIp: {
+        fontWeight: '500',
+    },
+    historyLocation: {
+        color: '#6b7280',
     },
 };
 
